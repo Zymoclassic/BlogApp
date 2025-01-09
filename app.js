@@ -15,9 +15,9 @@ app.use(express.urlencoded({extended: true}));
 
 // Routes
 app.use("/", Homepage)
-// app.use("/auth", AuthRouter);
-// app.use("/member", MemberRouter);
-// app.use("/posts", PostRouter);
+app.use("/auth", AuthRouter);
+app.use("/member", MemberRouter);
+app.use("/posts", PostRouter);
 
 // Connection to database
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })

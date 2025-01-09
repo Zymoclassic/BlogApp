@@ -1,16 +1,16 @@
 const express = require("express");
-const router = express.Router();
+const memberRouter = express.Router();
 
-// import functions from userController
-const {  getAllMember, getMember, changeDp, editMemberDetails } = require("../controllers/userController");
+// import functions from memberController
+const {  getAllMember, getMember, changeDp, editMemberDetails } = require("../controllers/memberController");
 
 // import the authentication middleware
 const { authMiddleware } = require("../utils/authMiddleware");
 
 // define user routes
-router.get('/', getAllMember);
-router.get('/:id', getMember);
-router.post('/changedp', authMiddleware, changeDp);
-router.patch('/editdetails', authMiddleware, editMemberDetails);
+memberRouter.get('/', getAllMember);
+memberRouter.get('/:id', getMember);
+memberRouter.post('/changedp', authMiddleware, changeDp);
+memberRouter.patch('/editdetails', authMiddleware, editMemberDetails);
 
-module.exports = router;
+module.exports = memberRouter;
