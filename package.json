@@ -1,0 +1,32 @@
+{
+  "name": "blogapp",
+  "version": "1.0.0",
+  "description": "Built using Node.js and Express.js for my final portfolio project at ALX",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zymoclassic/blogapp.git"
+  },
+  "author": "Awopeju Kolawole Moses",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zymoclassic/blogapp/issues"
+  },
+  "homepage": "https://github.com/zymoclassic/blogapp#readme",
+  "dependencies": {
+    "express": "^4.21.2",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express-fileupload": "^1.5.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.10.0",
+    "mongoose": "^8.8.0",
+    "uuid": "^11.0.3"
+  }
+}
