@@ -9,15 +9,19 @@ const { v4: uuid } = require("uuid");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Placeholder for all posts
-const getAllPosts = async (req, res, next) => {
-    res.json({ 
-        message: "Fetching all posts", 
-        posts: [
-            { id: 1, title: "First Post", content: "This is the first post", category: "General", author: "User1" },
-            { id: 2, title: "Second Post", content: "This is the second post", category: "Tech", author: "User2" }
-        ] 
-    });
+
+// Get all available blogs
+const getAllBlogs = async (req, res, next) => {
+    let posts;
+    try {
+        posts = await Post.find().sort({ updatedAt: -1 });
+    } catch (err) {
+        return res.status(500).json({ message: "ERROR!!! couldn't process the posts." });
+    }
+    if (!posts) {
+        return res.status(404).json({ message: "ERROR!!! No post found." });
+    }
+    return res.status(200).json({ posts });
 };
 
 // Placeholder for a specific post by ID
