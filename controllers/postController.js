@@ -10,8 +10,8 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 
-// Get all available blogs
-const getAllBlogs = async (req, res, next) => {
+// Get all available posts
+const getAllPosts = async (req, res, next) => {
     let posts;
     try {
         posts = await Post.find().sort({ updatedAt: -1 });
@@ -24,13 +24,69 @@ const getAllBlogs = async (req, res, next) => {
     return res.status(200).json({ posts });
 };
 
-// Placeholder for a specific post by ID
-const getById = async (req, res, next) => {
-    const { id } = req.params;
-    res.json({ 
-        message: `Fetching post with ID: ${id}`, 
-        post: { id, title: `Post ${id}`, content: `This is the content of post ${id}`, category: "Example", author: "User1" } 
-    });
+// Add blog, but verify user before adding
+const addPost = async (req, res, next) => {
+    const { title, description, category, user } = req.body;
+    const { image } = req.files;
+    let existingMember;
+    try {
+        if (!title || !description || !category || !user || !image) {
+            return res.status(422).json({ message: "Fill in all empty field(s) and upload an image." });
+        }
+
+        // Check the file size
+        if (image.size > 2000000) {
+            return res.status(400).json({ message: "File too large, Please upload something lesser than 2mb." });
+        }
+
+        // Check file type
+        const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+        if (!allowedTypes.includes(image.mimetype)) {
+            return res.status(400).json({ message: "Invalid file type. Please upload a valid image." });
+        }
+
+        // Rename file
+        let fileName = image.name;
+        let modFileName = fileName.split(".");
+        let newFileName = `${modFileName[0]}_${uuid()}.${modFileName.pop()}`;
+
+        // Upload file
+        image.mv(path.join(__dirname, "..", "uploads", newFileName), async (err) => {
+            if (err) {
+                return res.status(400).json({ message: "Error encountered while uploading file." });
+            }
+        });
+
+        existingMember = await Member.findById(member);
+        if (!existingMember) {
+            return res.status(400).json({ message: "This user cannot be found." });
+        }
+        const post = new Post({
+            title,
+            category,
+            description,
+            image: newFileName,
+            user,
+        });
+
+        const session = await mongoose.startSession();
+        try {
+            session.startTransaction();
+            await post.save({ session });
+            existingMember.posts.push(post);
+            await existingMember.save({ session });
+            await session.commitTransaction();
+        } catch (err) {
+            await session.abortTransaction();
+            return res.status(500).json({ message: "Error! Post can not be saved." });
+        } finally {
+            session.endSession();
+        }
+
+        return res.status(201).json({ post });
+    } catch (err) {
+        return res.status(500).json({ message: "We encountered an error trying to process the request." });
+    }
 };
 
 // Placeholder for posts by category
