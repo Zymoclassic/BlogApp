@@ -89,36 +89,52 @@ const addPost = async (req, res, next) => {
     }
 };
 
-// Placeholder for posts by category
+// Get a particular blog
+const getById = async (req, res, next) => {
+    const postId = req.params.id;
+    let post;
+    try {
+        post = await Post.findById(postId);
+    } catch (err) {
+        return res.status(500).json({ message: "Error! A blockade was encountered." });
+    }
+    if (!post) {
+        return res.status(404).json({ message: "The post you are trying to locate doesn't exist." });
+    }
+    return res.status(200).json({ post });
+};
+
+// Get blog by Category
 const getByCategory = async (req, res, next) => {
     const { category } = req.params;
-    res.json({ 
-        message: `Fetching posts in category: ${category}`, 
-        posts: [
-            { id: 3, title: "Tech Post", content: "A tech-related post", category, author: "User3" }
-        ] 
-    });
+    let postCategory;
+    try {
+        postCategory = await Post.find({ category }).sort({ createdAt: -1 });
+    } catch (err) {
+        return res.status(500).json({ message: "Error! A blockade was encountered." });
+    }
+    if (!postCategory) {
+        return res.status(404).json({ message: "The category you are trying to locate doesn't exist." });
+    }
+    return res.status(200).json({ postCategory });
 };
 
-// Placeholder for posts by a user
+// Get all blogs by a particular user
 const getAllMemberPosts = async (req, res, next) => {
-    const { id } = req.params;
-    res.json({ 
-        message: `Fetching all posts by user with ID: ${id}`, 
-        posts: [
-            { id: 4, title: "User Post", content: "A post by the user", category: "Personal", author: `User${id}` }
-        ] 
-    });
+    let memberId = req.params.id;
+    let memberPosts;
+    try {
+        memberPosts = await Member.findById(memberId).select("-password").populate("posts");
+    } catch (err) {
+        return res.status(500).json({ message: "An error occurred! Please try again." });
+    }
+    if (!memberPosts) {
+        return res.status(400).json({ message: "This is not a valid user" });
+    }
+    return res.status(200).json({ memberInfo: memberPosts });
 };
 
-// Placeholder for creating a post
-const addPost = async (req, res, next) => {
-    const { title, content, category } = req.body;
-    res.status(201).json({ 
-        message: "Post created successfully", 
-        post: { id: 5, title, content, category, author: "User5" } 
-    });
-};
+
 
 // Placeholder for updating a post
 const updatePost = async (req, res, next) => {
