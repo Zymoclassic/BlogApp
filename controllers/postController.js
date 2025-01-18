@@ -1,5 +1,4 @@
 const express = require('express');
-const postRouter = express.Router();
 const Post = require("../model/Post");
 const Member = require("../model/Member");
 const mongoose = require("mongoose");
@@ -8,6 +7,7 @@ const path = require("path");
 const { v4: uuid } = require("uuid");
 const dotenv = require("dotenv");
 dotenv.config();
+
 
 
 // Get all available posts
@@ -24,7 +24,7 @@ const getAllPosts = async (req, res, next) => {
     return res.status(200).json({ posts });
 };
 
-// Add blog, but verify user before adding
+// Add post, but verify member before adding
 const addPost = async (req, res, next) => {
     const { title, description, category, user } = req.body;
     const { image } = req.files;
@@ -89,7 +89,7 @@ const addPost = async (req, res, next) => {
     }
 };
 
-// Get a particular blog
+// Get a particular post
 const getById = async (req, res, next) => {
     const postId = req.params.id;
     let post;
@@ -104,7 +104,7 @@ const getById = async (req, res, next) => {
     return res.status(200).json({ post });
 };
 
-// Get blog by Category
+// Get post by Category
 const getByCategory = async (req, res, next) => {
     const { category } = req.params;
     let postCategory;
@@ -119,7 +119,7 @@ const getByCategory = async (req, res, next) => {
     return res.status(200).json({ postCategory });
 };
 
-// Get all blogs by a particular user
+// Get all posts by a particular user
 const getAllMemberPosts = async (req, res, next) => {
     let memberId = req.params.id;
     let memberPosts;
@@ -134,25 +134,103 @@ const getAllMemberPosts = async (req, res, next) => {
     return res.status(200).json({ memberInfo: memberPosts });
 };
 
-
-
-// Placeholder for updating a post
+// Edit post
 const updatePost = async (req, res, next) => {
-    const { id } = req.params;
-    const { title, content, category } = req.body;
-    res.json({ 
-        message: `Post with ID: ${id} updated successfully`, 
-        updatedPost: { id, title, content, category, author: "User5" } 
-    });
+    const { title, description, category } = req.body;
+    const postId = req.params.id;
+
+    try {
+        const post = await Post.findById(postId);
+        if (!post) {
+            return res.status(404).json({ message: "The blog you are trying to locate doesn't exist." });
+        }
+
+        if (!post.member.equals(new mongoose.Types.ObjectId(req.member.id))) {
+            return res.status(403).json({ message: "Unauthorized action." });
+        }
+
+        if (!title || !description || !category) {
+            return res.status(422).json({ message: "Please fill all blank fields." });
+        }
+
+        const image = req.files?.image;
+        if (image) {
+            if (image.size > 2000000) {
+                return res.status(400).json({ message: "File too large. Please upload something smaller than 2MB." });
+            }
+
+            const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+            if (!allowedTypes.includes(image.mimetype)) {
+                return res.status(400).json({ message: "Invalid file type. Please upload a valid image." });
+            }
+
+            if (post.image) {
+                const oldImagePath = path.join(__dirname, "..", "uploads", post.image);
+                try {
+                    await fs.promises.unlink(oldImagePath);
+                } catch (err) {
+                    console.error("Failed to delete existing image:", err);
+                }
+            }
+
+            const modFileName = image.name.split(".");
+            const newFileName = `${modFileName[0]}_${uuid()}.${modFileName.pop()}`;
+            const uploadPath = path.join(__dirname, "..", "uploads", newFileName);
+            await image.mv(uploadPath);
+
+            post.image = newFileName;
+        }
+
+        post.title = title;
+        post.description = description;
+        post.category = category;
+
+        const updatedPost = await post.save();
+
+        return res.status(200).json({ message: "Post updated successfully.", post: updatedPost });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
+    }
 };
 
-// Placeholder for deleting a post
+// Delete Post
 const deletePost = async (req, res, next) => {
-    const { id } = req.params;
-    res.json({ 
-        message: `Post with ID: ${id} deleted successfully` 
-    });
+    const postId = req.params.id;
+
+    try {
+        const post = await Post.findById(postId).populate("member");
+        if (!post) {
+            return res.status(404).json({ message: "The blog you are trying to locate doesn't exist." });
+        }
+
+        if (!post.member.equals(new mongoose.Types.ObjectId(req.member.id))) {
+            return res.status(403).json({ message: "Unauthorized action." });
+        }
+
+        if (post.image) {
+            const filePath = path.join(__dirname, "..", "uploads", post.image);
+            try {
+                await fs.promises.unlink(filePath);
+            } catch (err) {
+                console.error("Error deleting the image file:", err);
+                return res.status(500).json({ message: "Failed to delete the associated image file." });
+            }
+        }
+
+        await Post.findByIdAndDelete(postId);
+
+        post.member.posts.pull(post);
+        await post.member.save();
+
+        return res.status(200).json({ message: "Post successfully deleted." });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: "An error occurred. Please try again later." });
+    }
 };
+
+
 
 module.exports = {
     getAllPosts,
