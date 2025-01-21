@@ -11,7 +11,7 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         const verifyUser = jwt.verify(auth, process.env.JWT_SECRET);
-        req.user = verifyUser;
+        req.member = verifyUser;
         next();
     } catch (err) {
         if (err.name === 'TokenExpiredError') {

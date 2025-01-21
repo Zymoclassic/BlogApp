@@ -29,7 +29,7 @@ const getMember = async (req, res, next) => {
     } catch (err) {
         return res.status(500).json({ message: "ERROR!!! Can not process it." });
     }
-    if (!memberer) {
+    if (!member) {
         return res.status(404).json({ message: "The user can not be found!" });
     }
     return res.status(200).json({ member });
@@ -37,71 +37,65 @@ const getMember = async (req, res, next) => {
 
 const changeDp = async (req, res, next) => {
     try {
+        // Validate uploaded file
         if (!req.files || !req.files.image) {
             return res.status(422).json({ message: "Please select an image." });
         }
 
         const { image } = req.files;
 
-        //check the file size
-        if (image.size > 2000000) {
-            return res.status(400).json({ message: "File too large, Please upload something lesser than 2mb." });
+        // Check file size (2MB max)
+        if (image.size > 2 * 1024 * 1024) {
+            return res.status(400).json({ message: "File too large. Please upload a file smaller than 2MB." });
         }
 
-        //check file type
+        // Validate file type
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
         if (!allowedTypes.includes(image.mimetype)) {
             return res.status(400).json({ message: "Invalid file type. Please upload a valid image." });
         }
 
-        // check if user is authorized
+        // Find the member
         const member = await Member.findById(req.member.id);
-
         if (!member) {
             return res.status(404).json({ message: "Member not found." });
         }
 
-        //delete pre-existing dp
+        // Delete pre-existing profile image if it exists
         if (member.image) {
-            fs.unlink(path.join(__dirname, "..", "uploads", member.image), (err) => {
-                if (err) {
-                    return res.status(400).json({ message: "An error occurred, Please try again later." });
-                }
-            });
+            const oldFilePath = path.join(__dirname, "..", "uploads", member.image);
+            try {
+                await fs.unlink(oldFilePath);
+            } catch (err) {
+                console.error("Error deleting old image:", err.message);
+                // Log the error but continue processing
+            }
         }
 
-        //rename file
-        let fileName;
-        fileName = image.name;
-        let modFileName = fileName.split(".");
-        let newFileName = `${modFileName[0]}_${uuid()}.${modFileName.pop()}`;
+        // Generate new unique filename
+        const fileExtension = path.extname(image.name);
+        const newFileName = `${uuid()}${fileExtension}`;
 
-        // upload file
-        image.mv(path.join(__dirname, "..", "uploads", newFileName), async (err) => {
-            if (err) {
-                return res.status(400).json({ message: "Error encountered while uploading file." });
-            }
+        // Define upload path
+        const uploadPath = path.join(__dirname, "..", "uploads", newFileName);
 
-            try {
-                // Update user record
-                const updatedImage = await Member.findByIdAndUpdate(
-                    req.member.id,
-                    { image: newFileName },
-                    { new: true }
-                );
-                if (!updatedImage) {
-                    return res.status(400).json({ message: "Error updating user image." });
-                }
-                return res.status(200).json({ message: "File successfully uploaded.", image: newFileName });
-            } catch (err) {
-                return res.status(500).json({ message: "An error occurred while updating the image." });
-            }
+        // Move uploaded file to destination
+        await image.mv(uploadPath);
+
+        // Update member record with the new image filename
+        member.image = newFileName;
+        await member.save();
+
+        return res.status(200).json({
+            message: "File successfully uploaded.",
+            image: newFileName,
         });
-
     } catch (err) {
-        return res.status(500).json({ message: "ERROR!!! Can not process it." });
+        console.error("Error in changeDp:", err.message);
+        return res.status(500).json({ message: "An error occurred while processing your request." });
     }
 };
+
 
 // update user details
 const editMemberDetails = async (req, res, next) => {
