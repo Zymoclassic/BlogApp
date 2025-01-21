@@ -216,6 +216,7 @@ const deletePost = async (req, res, next) => {
                 console.error("Error deleting the image file:", err);
                 return res.status(500).json({ message: "Failed to delete the associated image file." });
             }
+
         }
 
         await Post.findByIdAndDelete(postId);
@@ -226,7 +227,7 @@ const deletePost = async (req, res, next) => {
         return res.status(200).json({ message: "Post successfully deleted." });
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: "An error occurred. Please try again later." });
+        return res.status(500).json({ message: "An error occurred while executing. Please try again later." });
     }
 };
 
